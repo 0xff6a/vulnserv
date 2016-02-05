@@ -1,0 +1,4 @@
+printf("TRUN 01trun.spk");
+s_readline();
+s_string("TRUN ");
+s_string_variable("START");
